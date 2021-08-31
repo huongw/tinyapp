@@ -1,9 +1,9 @@
 const express = require("express");
-const bodyParser = require("body-parser");
 const app = express();
 const PORT = 8080;
 
 app.set("view engine", "ejs");
+app.use(express.urlencoded({ extended: true }));
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
@@ -41,15 +41,19 @@ app.get("/urls/:shortURL", (req, res) => {
   res.render("urls_show", templateVars);
 });
 
-app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}!`);
+app.get("/u/:shortURL", (req, res) => {
+  const shortURL = req.params.shortURL;
+  const longURL = urlDatabase[shortURL]; 
+  res.redirect(longURL);
 });
 
 app.post("/urls", (req, res) => {
   const longURL = req.body.longURL;
   const shortURL = generateRandomString(6);
   urlDatabase[shortURL] = longURL;
-  res.redirect("/")    
+  res.redirect(`/urls/${shortURL}`);  
 });
 
-app.use(bodyParser.urlencoded({extended: true}));
+app.listen(PORT, () => {
+  console.log(`Example app listening on port ${PORT}!`);
+});
