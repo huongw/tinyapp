@@ -4,56 +4,57 @@ const PORT = 8080; // default port 8080
 
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
+const bcrypt = require("bcrypt");
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.set("view engine", "ejs");
 
 // -- OBJECTS ----------------------------------------------
-const urlDatabase = {  
-  b6UTxQ: { 
-    longURL: "http://www.lighthouselabs.ca", 
-    userID: "userRandomID" 
+const urlDatabase = {
+  b6UTxQ: {
+    longURL: "http://www.lighthouselabs.ca",
+    userID: "userRandomID",
   },
 
-  i3BoGr: { 
-    longURL: "https://www.google.ca", 
-    userID: "user2RandomID" 
-  },  
+  i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "user2RandomID",
+  },
 
-  cxYzPo: { 
-    longURL: "https://www.youtube.com", 
-    userID: "userRandomID" 
-  }
+  cxYzPo: {
+    longURL: "https://www.youtube.com",
+    userID: "userRandomID",
+  },
 };
 
 const users = {
   userRandomID: {
     id: "userRandomID",
     email: "user@example.com",
-    password: "1",
+    password: "$2b$10$Kx9adL2aFW3a7iFvXp1zmOtxVuiwM0TTlxpxrmOh7Ny9sH4z6Sdnq",
   },
   user2RandomID: {
     id: "user2RandomID",
     email: "user2@example.com",
-    password: "1",
+    password: "$2b$10$Kx9adL2aFW3a7iFvXp1zmOtxVuiwM0TTlxpxrmOh7Ny9sH4z6Sdnq",
   },
 };
 
 // -- GET URL FOR USER ---------------------------------------
 const urlsForUser = (userID) => {
   let userDatabase = {};
-  
+
   for (const key in urlDatabase) {
     if (userID === urlDatabase[key].userID) {
-      userDatabase[key] = urlDatabase[key].longURL
+      userDatabase[key] = urlDatabase[key].longURL;
     }
   }
   return userDatabase;
 };
 
 // -- GET USER EMAIL FUNCTION ---------------------------------
-const getUserByEmail = function(email) {
+const getUserByEmail = function (email) {
   for (const id in users) {
     const user = users[id];
     if (user.email === email) {
@@ -67,7 +68,8 @@ const getUserByEmail = function(email) {
 // -- GENERATE ID FUNCTION ------------------------------------
 const generateRandomString = function (length) {
   var result = "";
-  var characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  var characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   var charactersLength = characters.length;
   for (var i = 0; i < length; i++) {
     result += characters.charAt(Math.floor(Math.random() * charactersLength));
@@ -77,27 +79,24 @@ const generateRandomString = function (length) {
 
 // -- GET METHODS ----------------------------------------------
 app.get("/urls", (req, res) => {
- 
   // Fetch user ID from cookie
   const userId = req.cookies["user_id"];
   const user = users[userId];
 
   if (user) {
-    const formatUserDatabase = urlsForUser(user.id)
+    const formatUserDatabase = urlsForUser(user.id);
 
     const templateVars = {
       urls: formatUserDatabase,
       user,
     };
-    
+
     res.render("urls_index", templateVars);
   }
-  
 
   if (!userId) {
-    return res.status(401).redirect('/login')
+    return res.status(401).redirect("/login");
   }
-
 });
 
 app.get("/urls/new", (req, res) => {
@@ -105,7 +104,7 @@ app.get("/urls/new", (req, res) => {
   const user = users[userId];
 
   if (!userId) {
-    return res.status(401).redirect('/login')
+    return res.status(401).redirect("/login");
   }
 
   const templateVars = { user };
@@ -132,11 +131,11 @@ app.get("/u/:shortURL", (req, res) => {
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const userId = req.cookies["user_id"];
-  const longURL = urlsForUser(userId)[shortURL]
+  const longURL = urlsForUser(userId)[shortURL];
   const user = users[userId];
 
   if (!userId) {
-    return res.status(401).redirect('/login')
+    return res.status(401).redirect("/login");
   }
 
   const templateVars = {
@@ -160,17 +159,17 @@ app.post("/urls", (req, res) => {
 
   urlDatabase[shortURL] = {
     longURL,
-    userID
-  }
- 
+    userID,
+  };
+
   res.redirect(`/urls/${shortURL}`);
 });
 
 // REGISTER
 app.post("/register", (req, res) => {
- 
   const email = req.body.email;
   const password = req.body.password;
+  const hashedPassword = bcrypt.hashSync(password, 10);
 
   if (!email || !password) {
     res.status(400).send("Email and password cannot be blank");
@@ -185,7 +184,7 @@ app.post("/register", (req, res) => {
 
   const id = generateRandomString(6);
 
-  const newUser = { id, email, password };
+  const newUser = { id, email, password: hashedPassword };
   users[id] = newUser;
 
   res.cookie("user_id", id);
@@ -196,14 +195,16 @@ app.post("/register", (req, res) => {
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-
   const user = getUserByEmail(email);
 
   if (!user) {
     return res.status(403).send("User Not Found");
   }
 
-  if (user.password !== password) {
+  // CHECK USER PASSWORD
+  const isTrue = bcrypt.compareSync(password, user.password);
+
+  if (!isTrue) {
     return res.status(403).send("Password Is Incorrect");
   }
 
