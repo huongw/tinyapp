@@ -13,21 +13,33 @@
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
-      <div class="navbar-nav">
+      <div class="navbar-nav mr-auto">
         <a class="nav-item nav-link" href="/urls">My URLs</a>
         <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
       </div>
+      <% if(user) { %>
+      <form class="form-inline mx-3" action="/logout" method="POST">
+        <span class="navbar-text text-dark text-inline mx-3">
+          <%= user.email %>
+        </span>
+        <button class="btn btn-outline-dark my-2 my-sm-0" type="submit">
+          Log Out
+        </button>
+      </form>
+      <% } else { %>
+      <a
+        href="/register"
+        class="btn btn-outline-dark my-2 my-sm-0"
+        style="margin-right: 20px"
+        >Register</a
+      >
+      <a
+        href="/login"
+        class="btn btn-outline-dark my-2 my-sm-0"
+        style="margin-right: 20px"
+        >Log In</a
+      >
+      <% } %>
     </div>
-    <% if(user) { %>
-    <h3><%= user.email %></h3>
-    <form action="/logout" method="post">
-      <button type="submit">Log out</button>
-    </form>
-    <% } else { %>
-    <a href="/register" class="text-white" style="margin-right: 20px"
-      >Register</a
-    >
-    <a href="/login" class="text-white">Log In</a>
-    <% } %>
   </nav>
 </header>

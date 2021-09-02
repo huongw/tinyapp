@@ -201,7 +201,7 @@ app.post("/login", (req, res) => {
     return res.status(403).send("User Not Found");
   }
 
-  // CHECK USER PASSWORD
+  // COMPARE USER PASSWORD
   const isTrue = bcrypt.compareSync(password, user.password);
 
   if (!isTrue) {
@@ -218,13 +218,14 @@ app.post("/logout", (req, res) => {
   res.redirect("/urls");
 });
 
+// DELETE
 app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
   const userID = req.cookies["user_id"];
   const shortURLObj = urlDatabase[shortURL];
 
   if (!shortURLObj || userID !== shortURLObj.userId) {
-    return res.status(400).send("Not Allowed to Access");
+    return res.status(403).send("<h1>Not Allowed to Access</h1>");
   }
 
   delete urlDatabase[shortURL];
@@ -232,7 +233,6 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect("/urls");
 });
 
-// DELETE
 app.post("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const longURL = req.body.longURL;
@@ -240,7 +240,7 @@ app.post("/urls/:shortURL", (req, res) => {
   const shortURLObj = urlDatabase[shortURL];
 
   if (!shortURLObj || userID !== shortURLObj.userId) {
-    return res.status(400).send("Not Allowed to Access");
+    return res.status(403).send("<h1>Not Allowed to Access</h1>");
   }
 
   urlDatabase[shortURL] = longURL;
