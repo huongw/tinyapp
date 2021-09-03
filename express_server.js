@@ -2,7 +2,7 @@ const express = require("express");
 const app = express();
 const PORT = 8080; // default port 8080
 
-const getUserByEmail = require("./helper/helperFunction");
+const { getUserByEmail, urlsForUser, generateRandomString } = require("./helper/helperFunction");
 const bodyParser = require("body-parser");
 const cookieSession = require("cookie-session");
 const bcrypt = require("bcrypt");
@@ -60,30 +60,6 @@ const checkURL = function(url, database) {
   return false;
 };
 
-// -- GET URL FOR USER ---------------------------------------
-const urlsForUser = (userID) => {
-  let userDatabase = {};
-
-  for (const key in urlDatabase) {
-    if (userID === urlDatabase[key].userID) {
-      userDatabase[key] = urlDatabase[key].longURL;
-    }
-  }
-  return userDatabase;
-};
-
-// -- GENERATE ID FUNCTION ------------------------------------
-const generateRandomString = function (length) {
-  var result = "";
-  var characters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  var charactersLength = characters.length;
-  for (var i = 0; i < length; i++) {
-    result += characters.charAt(Math.floor(Math.random() * charactersLength));
-  }
-  return result;
-};
-
 // -- GET METHODS ----------------------------------------------
 app.get("/", (req, res) => {
   const userId = req.session.user_id;
@@ -103,7 +79,7 @@ app.get("/urls", (req, res) => {
   const user = users[userId];
 
   if (user) {
-    const formatUserDatabase = urlsForUser(user.id);
+    const formatUserDatabase = urlsForUser(user.id, urlDatabase);
 
     const templateVars = {
       urls: formatUserDatabase,
@@ -133,7 +109,7 @@ app.get("/urls/new", (req, res) => {
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const userId = req.session.user_id;
-  const longURL = urlsForUser(userId)[shortURL];
+  const longURL = urlsForUser(userId, urlDatabase)[shortURL];
   const user = users[userId];
   const isTrue = checkURL(shortURL, urlDatabase);
 
@@ -146,7 +122,7 @@ app.get("/urls/:shortURL", (req, res) => {
   if (userId) {
     if (isTrue) {
      const urlUserID = urlDatabase[shortURL].userID
-
+    
      if (userId === urlUserID) {
        res.render("urls_show", templateVars);
       } else {
@@ -173,11 +149,23 @@ app.get("/u/:shortURL", (req, res) => {
 
 // REGISTER
 app.get("/register", (req, res) => {
+  const userID = req.session.user_id;
+
+  if(userID) {
+    return res.redirect("/urls");
+  }
+
   res.render("registration", { user: null });
 });
 
 // LOGIN
 app.get("/login", (req, res) => {
+  const userID = req.session.user_id;
+
+  if(userID) {
+    return res.redirect("/urls");
+  }
+  
   res.render("login", { user: null });
 });
 
@@ -197,6 +185,36 @@ app.post("/urls", (req, res) => {
   };
 
   res.redirect(`/urls/${shortURL}`);
+});
+
+app.post("/urls/:shortURL", (req, res) => {
+  const shortURL = req.params.shortURL;
+  const longURL = req.body.longURL;
+  const userID = req.session.user_id;
+  const shortURLObj = urlDatabase[shortURL];
+
+  if (!shortURLObj || userID !== shortURLObj.userID) {
+    return res.status(403).send("<h1>Not Allowed to Access</h1>");
+  }
+
+  urlDatabase[shortURL] = longURL;
+
+  res.redirect("/urls");
+});
+
+// DELETE
+app.post("/urls/:shortURL/delete", (req, res) => {
+  const shortURL = req.params.shortURL;
+  const userID = req.session.user_id;
+  const shortURLObj = urlDatabase[shortURL];
+
+  if (!shortURLObj || userID !== shortURLObj.userID) {
+    return res.status(403).send("<h1>Not Allowed to Access</h1>");
+  }
+
+  delete urlDatabase[shortURL];
+
+  res.redirect("/urls");
 });
 
 // REGISTER
@@ -258,36 +276,6 @@ app.post("/login", (req, res) => {
 // LOG OUT
 app.post("/logout", (req, res) => {
   req.session = null;
-  res.redirect("/urls");
-});
-
-// DELETE
-app.post("/urls/:shortURL/delete", (req, res) => {
-  const shortURL = req.params.shortURL;
-  const userID = req.session.user_id;
-  const shortURLObj = urlDatabase[shortURL];
-
-  if (!shortURLObj || userID !== shortURLObj.userID) {
-    return res.status(403).send("<h1>Not Allowed to Access</h1>");
-  }
-
-  delete urlDatabase[shortURL];
-
-  res.redirect("/urls");
-});
-
-app.post("/urls/:shortURL", (req, res) => {
-  const shortURL = req.params.shortURL;
-  const longURL = req.body.longURL;
-  const userID = req.session.user_id;
-  const shortURLObj = urlDatabase[shortURL];
-
-  if (!shortURLObj || userID !== shortURLObj.userID) {
-    return res.status(403).send("<h1>Not Allowed to Access</h1>");
-  }
-
-  urlDatabase[shortURL] = longURL;
-
   res.redirect("/urls");
 });
 

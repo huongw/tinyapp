@@ -10,4 +10,28 @@ const getUserByEmail = function (users, email) {
   return null;
 };
 
-module.exports = getUserByEmail;
+// -- GET URL FOR USER ---------------------------------------
+const urlsForUser = (userID, urlDatabase) => {
+  let userDatabase = {};
+
+  for (const key in urlDatabase) {
+    if (userID === urlDatabase[key].userID) {
+      userDatabase[key] = urlDatabase[key].longURL;
+    }
+  }
+  return userDatabase;
+};
+
+// -- GENERATE ID FUNCTION ------------------------------------
+const generateRandomString = function (length) {
+  var result = "";
+  var characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  var charactersLength = characters.length;
+  for (var i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+  return result;
+};
+
+module.exports = { getUserByEmail, urlsForUser, generateRandomString };
