@@ -67,7 +67,7 @@ app.get("/urls", (req, res) => {
   const userId = req.session.user_id;
   const user = users[userId];
   if (!user) {
-    return res.status(401).send("<h1>You Are Not Logged In <a href='/login'>Log In Here</a></h1>");
+    return res.status(401).redirect("/login");
   }
 
   const urls = urlsForUser(user.id, urlDatabase);
