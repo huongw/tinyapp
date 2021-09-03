@@ -1,5 +1,5 @@
 // -- GET USER EMAIL FUNCTION ---------------------------------
-const getUserByEmail = function (users, email) {
+const getUserByEmail = function (email, users) {
   for (const id in users) {
     const user = users[id];
     if (user.email === email) {

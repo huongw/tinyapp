@@ -50,16 +50,6 @@ const users = {
   },
 };
 
-const checkURL = function(url, database) {
-  for (const shortURL in database) {
-    if (url === shortURL) {
-      return true;
-    }
-  }
-
-  return false;
-};
-
 // -- GET METHODS ----------------------------------------------
 app.get("/", (req, res) => {
   const userId = req.session.user_id;
@@ -77,22 +67,16 @@ app.get("/urls", (req, res) => {
   // Fetch user ID from session
   const userId = req.session.user_id;
   const user = users[userId];
-
-  if (user) {
-    const formatUserDatabase = urlsForUser(user.id, urlDatabase);
-
-    const templateVars = {
-      urls: formatUserDatabase,
-      user,
-    };
-
-    res.render("urls_index", templateVars);
+  if (!user) {
+    return res.status(401).send("<h1>You Are Not Logged In <a href='/login'>Log In Here</a></h1>");
   }
 
-  if (!userId) {
-    return res.status(401).redirect("/login");
-  }
+  const urls = urlsForUser(user.id, urlDatabase);
+  const templateVars = { urls, user };
+
+  res.render("urls_index", templateVars);
 });
+
 
 app.get("/urls/new", (req, res) => {
   const userId = req.session.user_id;
@@ -107,33 +91,26 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  const shortURL = req.params.shortURL;
   const userId = req.session.user_id;
-  const longURL = urlsForUser(userId, urlDatabase)[shortURL];
-  const user = users[userId];
-  const isTrue = checkURL(shortURL, urlDatabase);
-
-  const templateVars = {
-    shortURL,
-    longURL,
-    user,
-  };
-
-  if (userId) {
-    if (isTrue) {
-     const urlUserID = urlDatabase[shortURL].userID
-    
-     if (userId === urlUserID) {
-       res.render("urls_show", templateVars);
-      } else {
-       return res.send("You Do Not Have Access");
-      }
-    } else if (!isTrue) {
-      res.send("URL Does Not Exist")
-    }
-  } else {
-     return res.status(401).send("<h1>You Are Not Logged In <a href='/login'>Go Back</a></h1>");
+  if (!userId) {
+    return res.status(401).send("<h1>You Are Not Logged In <a href='/login'>Go Back</a></h1>");
   }
+
+  const shortURL = req.params.shortURL;
+  const urlObj = urlDatabase[shortURL];
+  if (!urlObj) {
+    return res.status(400).send("URL Not Found");
+  }
+  
+  if (urlObj.userID !== userId) {
+    return res.status(403).send("You Do Not Have Access");
+  }
+
+  const longURL = urlObj.longURL;
+  const user = users[userId];
+  const templateVars = { shortURL, longURL, user };
+
+  res.render("urls_show", templateVars);
 });
 
 app.get("/u/:shortURL", (req, res) => {
@@ -188,27 +165,40 @@ app.post("/urls", (req, res) => {
 });
 
 app.post("/urls/:shortURL", (req, res) => {
-  const shortURL = req.params.shortURL;
-  const longURL = req.body.longURL;
   const userID = req.session.user_id;
-  const shortURLObj = urlDatabase[shortURL];
-
-  if (!shortURLObj || userID !== shortURLObj.userID) {
+  if (!userID) {
+    return res.status(403).send("<h1>You Need To Log In</h1>");
+  } 
+  
+  const shortURL = req.params.shortURL;
+  const urlObj = urlDatabase[shortURL];
+  if (userID !== urlObj.userID) {
     return res.status(403).send("<h1>Not Allowed to Access</h1>");
   }
 
-  urlDatabase[shortURL] = longURL;
+  if (!req.body.longURL) {
+    return res.status(400).send("<h1>URL Cannot Be Blank</h1>");
+  }
+  
+  urlObj.longURL = req.body.longURL;
 
   res.redirect("/urls");
 });
 
 // DELETE
 app.post("/urls/:shortURL/delete", (req, res) => {
-  const shortURL = req.params.shortURL;
   const userID = req.session.user_id;
-  const shortURLObj = urlDatabase[shortURL];
+  if (!userID) {
+    return res.status(403).send("<h1>You Need To Log In</h1>");
+  }
 
-  if (!shortURLObj || userID !== shortURLObj.userID) {
+  const shortURL = req.params.shortURL;
+  const urlObj = urlDatabase[shortURL];
+  if (!urlObj) {
+    return res.status(403).send("<h1>URL Does Not Exist</h1>");
+  }
+
+  if (userID !== urlObj.userID) {
     return res.status(403).send("<h1>Not Allowed to Access</h1>");
   }
 
@@ -232,7 +222,7 @@ app.post("/register", (req, res) => {
     return;
   }
 
-  const user = getUserByEmail(users, email);
+  const user = getUserByEmail(email, users);
 
   if (user) {
     res.status(400).send("User already exists");
@@ -252,7 +242,7 @@ app.post("/register", (req, res) => {
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  const user = getUserByEmail(users, email);
+  const user = getUserByEmail(email, users);
 
   if (!user) {
     return res
