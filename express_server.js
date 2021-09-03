@@ -56,12 +56,11 @@ app.get("/", (req, res) => {
   const user = users[userId];
 
   if (!user) {
-    res.redirect("/login")
-    return;
+    return res.redirect("/login");
   }
 
   res.redirect("/urls");
-})
+});
 
 app.get("/urls", (req, res) => {
   // Fetch user ID from session
@@ -128,7 +127,7 @@ app.get("/u/:shortURL", (req, res) => {
 app.get("/register", (req, res) => {
   const userID = req.session.user_id;
 
-  if(userID) {
+  if (userID) {
     return res.redirect("/urls");
   }
 
@@ -139,7 +138,7 @@ app.get("/register", (req, res) => {
 app.get("/login", (req, res) => {
   const userID = req.session.user_id;
 
-  if(userID) {
+  if (userID) {
     return res.redirect("/urls");
   }
   
@@ -168,8 +167,8 @@ app.post("/urls/:shortURL", (req, res) => {
   const userID = req.session.user_id;
   if (!userID) {
     return res.status(403).send("<h1>You Need To Log In</h1>");
-  } 
-  
+  }
+
   const shortURL = req.params.shortURL;
   const urlObj = urlDatabase[shortURL];
   if (userID !== urlObj.userID) {
