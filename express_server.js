@@ -50,6 +50,16 @@ const users = {
   },
 };
 
+const checkURL = function(url, database) {
+  for (const shortURL in database) {
+    if (url === shortURL) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 // -- GET URL FOR USER ---------------------------------------
 const urlsForUser = (userID) => {
   let userDatabase = {};
@@ -75,6 +85,18 @@ const generateRandomString = function (length) {
 };
 
 // -- GET METHODS ----------------------------------------------
+app.get("/", (req, res) => {
+  const userId = req.session.user_id;
+  const user = users[userId];
+
+  if (!user) {
+    res.redirect("/login")
+    return;
+  }
+
+  res.redirect("/urls");
+})
+
 app.get("/urls", (req, res) => {
   // Fetch user ID from session
   const userId = req.session.user_id;
@@ -108,14 +130,34 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new", templateVars);
 });
 
-// REGISTER
-app.get("/register", (req, res) => {
-  res.render("registration", { user: null });
-});
+app.get("/urls/:shortURL", (req, res) => {
+  const shortURL = req.params.shortURL;
+  const userId = req.session.user_id;
+  const longURL = urlsForUser(userId)[shortURL];
+  const user = users[userId];
+  const isTrue = checkURL(shortURL, urlDatabase);
 
-// LOGIN
-app.get("/login", (req, res) => {
-  res.render("login", { user: null });
+  const templateVars = {
+    shortURL,
+    longURL,
+    user,
+  };
+
+  if (userId) {
+    if (isTrue) {
+     const urlUserID = urlDatabase[shortURL].userID
+
+     if (userId === urlUserID) {
+       res.render("urls_show", templateVars);
+      } else {
+       return res.send("You Do Not Have Access");
+      }
+    } else if (!isTrue) {
+      res.send("URL Does Not Exist")
+    }
+  } else {
+     return res.status(401).send("<h1>You Are Not Logged In <a href='/login'>Go Back</a></h1>");
+  }
 });
 
 app.get("/u/:shortURL", (req, res) => {
@@ -129,23 +171,14 @@ app.get("/u/:shortURL", (req, res) => {
   res.redirect(url.longURL);
 });
 
-app.get("/urls/:shortURL", (req, res) => {
-  const shortURL = req.params.shortURL;
-  const userId = req.session.user_id;
-  const longURL = urlsForUser(userId)[shortURL];
-  const user = users[userId];
+// REGISTER
+app.get("/register", (req, res) => {
+  res.render("registration", { user: null });
+});
 
-  if (!userId) {
-    return res.status(401).redirect("/login");
-  }
-
-  const templateVars = {
-    shortURL,
-    longURL,
-    user,
-  };
-
-  res.render("urls_show", templateVars);
+// LOGIN
+app.get("/login", (req, res) => {
+  res.render("login", { user: null });
 });
 
 // -- POST METHODS ---------------------------------------------
